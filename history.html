@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>History</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+h1 {
+  color: #333;
+  text-align: center;
+}
+.container {
+  background: white;
+  padding: 20px;
+  border-radius: 5px;
+  margin: 20px auto;
+  max-width: 600px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  min-height: 200px;
+}
+.log-item {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+.buttons {
+  text-align: center;
+  margin-top: 20px;
+}
+button {
+  background-color: #6c757d;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  margin: 5px;
+}
+button:hover {
+  background-color: #5a6268;
+}
+.btn-red {
+  background-color: #dc3545;
+}
+.btn-red:hover {
+  background-color: #c82333;
+}
+</style>
+</head>
+<body>
+<h1>History</h1>
+<div class="container" id="historyBox">
+  Loading history...
+</div>
+<div class="buttons">
+  <button class="btn-red" onclick="clearAll()">Clear All Data</button>
+  <button onclick="goBack()">Back to Main</button>
+</div>
+<script>
+let history = JSON.parse(localStorage.getItem('historyLogs') || '[]');
+let container = document.getElementById('historyBox');
+if (history.length === 0) {
+  container.innerHTML = '<p>No history yet.</p>';
+} else {
+  let html = '';
+  for (let i = 0; i < history.length; i++) {
+    html += '<div class="log-item">' + history[i] + '</div>';
+  }
+  container.innerHTML = html;
+}
+function clearAll() {
+  if (confirm('Delete all data?')) {
+    localStorage.removeItem('warehouses');
+    localStorage.removeItem('historyLogs');
+    container.innerHTML = '<p>All data cleared.</p>';
+  }
+}
+function goBack() {
+  window.location.href = 'index.html';
+}
+</script>
+
+</body>
+</html>

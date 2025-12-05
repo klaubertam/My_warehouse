@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Warehouse Manager</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+h1 {
+  color: #333;
+  text-align: center;
+}
+.container {
+  background: white;
+  padding: 20px;
+  border-radius: 5px;
+  margin: 20px auto;
+  max-width: 500px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.input-group {
+  margin: 15px 0;
+}
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+button {
+  background-color: #6c757d;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  margin: 5px;
+}
+button:hover {
+  background-color: #5a6268;
+}
+.btn-purple {
+  background-color: #6f42c1;
+}
+.btn-purple:hover {
+  background-color: #5a32a3;
+}
+.history-btn {
+  text-align: center;
+  margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<h1>Warehouse Manager</h1>
+<div class="container">
+  <h3>Create Warehouse</h3>
+  <div class="input-group">
+    <input type="text" id="warehouseName" placeholder="Warehouse name">
+  </div>
+  <button class="btn-purple" onclick="addWarehouse()">Create Warehouse</button>
+  <h3 style="margin-top: 30px;">Add Item</h3>
+  <div class="input-group">
+    <input type="text" id="itemName" placeholder="Item name">
+  </div>
+  <button class="btn-purple" onclick="addItem()">Add Item</button>
+  <div class="history-btn">
+    <button onclick="viewHistory()">View History</button>
+  </div>
+</div>
+<script>
+let warehouses = [];
+let currentWarehouse = null;
+window.onload = function() {
+  let saved = localStorage.getItem('warehouses');
+  if (saved) {
+    warehouses = JSON.parse(saved);
+    if (warehouses.length > 0) {
+      currentWarehouse = warehouses[0];
+    }
+  }
+}
+function saveData() {
+  localStorage.setItem('warehouses', JSON.stringify(warehouses));
+}
+function addWarehouse() {
+  let name = document.getElementById('warehouseName').value;
+  if (!name) {
+    alert('Enter a warehouse name');
+    return;
+  }
+  let now = new Date().toLocaleString();
+  warehouses.push({
+    name: name,
+    created: now,
+    items: []
+  });
+  currentWarehouse = warehouses[warehouses.length - 1];
+  let history = JSON.parse(localStorage.getItem('historyLogs') || '[]');
+  history.push(now + ': Created warehouse: ' + name);
+  localStorage.setItem('historyLogs', JSON.stringify(history));
+  saveData(); 
+  document.getElementById('warehouseName').value = '';
+  alert('Warehouse "' + name + '" created');
+}
+function addItem() {
+  let itemName = document.getElementById('itemName').value;
+  if (!itemName) {
+    alert('Enter an item name');
+    return;
+  }
+  if (!currentWarehouse) {
+    alert('Create a warehouse first');
+    return;
+  }
+  let now = new Date().toLocaleString();
+  currentWarehouse.items.push({
+    name: itemName,
+    time: now
+  });
+  let history = JSON.parse(localStorage.getItem('historyLogs') || '[]');
+  history.push(now + ': Added "' + itemName + '" to "' + currentWarehouse.name + '"');
+  localStorage.setItem('historyLogs', JSON.stringify(history));
+  saveData();
+  document.getElementById('itemName').value = '';
+  alert('Added "' + itemName + '" to ' + currentWarehouse.name);
+}
+function viewHistory() {
+  window.location.href = 'history.html';
+}
+</script>
+</body>
+</html>
