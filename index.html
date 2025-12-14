@@ -52,85 +52,229 @@ button:hover {
   text-align: center;
   margin-top: 20px;
 }
+.message {
+  padding: 10px;
+  border-radius: 5px;
+  margin: 10px 0;
+  display: none;
+}
+.message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+.message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
 </style>
 </head>
 <body>
 <h1>Warehouse Manager</h1>
 <div class="container">
+  <div id="message" class="message"></div>
+  
+  <h3>Select Warehouse</h3>
+  <div class="input-group">
+    <select id="warehouseSelect" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+      <option value="">-- Select Warehouse --</option>
+    </select>
+  </div>
+  
   <h3>Create Warehouse</h3>
   <div class="input-group">
     <input type="text" id="warehouseName" placeholder="Warehouse name">
   </div>
   <button class="btn-purple" onclick="addWarehouse()">Create Warehouse</button>
+  
   <h3 style="margin-top: 30px;">Add Item</h3>
   <div class="input-group">
     <input type="text" id="itemName" placeholder="Item name">
+    <input type="number" id="itemQuantity" placeholder="Quantity" value="1" min="1" style="width: 100px; margin-top: 5px;">
   </div>
-  <button class="btn-purple" onclick="addItem()">Add Item</button>
+  <button class="btn-purple" onclick="addItem()" id="addItemBtn" disabled>Add Item</button>
+  
   <div class="history-btn">
     <button onclick="viewHistory()">View History</button>
   </div>
 </div>
+
 <script>
 let warehouses = [];
 let currentWarehouse = null;
+
 window.onload = function() {
+  loadData();
+  updateWarehouseSelect();
+};
+
+function loadData() {
   let saved = localStorage.getItem('warehouses');
   if (saved) {
     warehouses = JSON.parse(saved);
     if (warehouses.length > 0) {
-      currentWarehouse = warehouses[0];
+      let lastActive = localStorage.getItem('lastActiveWarehouse');
+      if (lastActive) {
+        currentWarehouse = warehouses.find(w => w.name === lastActive);
+      }
+      if (!currentWarehouse && warehouses.length > 0) {
+        currentWarehouse = warehouses[0];
+      }
+      updateAddButton();
     }
   }
 }
-function saveData() {
-  localStorage.setItem('warehouses', JSON.stringify(warehouses));
+
+function updateWarehouseSelect() {
+  let select = document.getElementById('warehouseSelect');
+  select.innerHTML = '<option value="">-- Select Warehouse --</option>';
+  
+  warehouses.forEach(warehouse => {
+    let option = document.createElement('option');
+    option.value = warehouse.name;
+    option.textContent = warehouse.name;
+    if (currentWarehouse && warehouse.name === currentWarehouse.name) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  });
 }
-function addWarehouse() {
-  let name = document.getElementById('warehouseName').value;
-  if (!name) {
-    alert('Enter a warehouse name');
+
+function changeWarehouse() {
+  let select = document.getElementById('warehouseSelect');
+  let selectedName = select.value;
+  
+  if (!selectedName) {
+    currentWarehouse = null;
+    updateAddButton();
     return;
   }
+  
+  currentWarehouse = warehouses.find(w => w.name === selectedName);
+  if (currentWarehouse) {
+    localStorage.setItem('lastActiveWarehouse', currentWarehouse.name);
+    updateAddButton();
+    showMessage(`Selected warehouse: ${currentWarehouse.name}`, 'success');
+  }
+}
+
+function updateAddButton() {
+  let addButton = document.getElementById('addItemBtn');
+  addButton.disabled = !currentWarehouse;
+}
+
+function addWarehouse() {
+  let nameInput = document.getElementById('warehouseName');
+  let name = nameInput.value.trim();
+  
+  if (!name) {
+    showMessage('Please enter a warehouse name', 'error');
+    return;
+  }
+  
+  if (warehouses.some(w => w.name.toLowerCase() === name.toLowerCase())) {
+    showMessage('A warehouse with this name already exists!', 'error');
+    return;
+  }
+  
   let now = new Date().toLocaleString();
-  warehouses.push({
+  let newWarehouse = {
     name: name,
     created: now,
     items: []
-  });
-  currentWarehouse = warehouses[warehouses.length - 1];
+  };
+  
+  warehouses.push(newWarehouse);
+  currentWarehouse = newWarehouse;
+  
+  saveData();
+  
   let history = JSON.parse(localStorage.getItem('historyLogs') || '[]');
   history.push(now + ': Created warehouse: ' + name);
   localStorage.setItem('historyLogs', JSON.stringify(history));
-  saveData(); 
-  document.getElementById('warehouseName').value = '';
-  alert('Warehouse "' + name + '" created');
+  
+  updateWarehouseSelect();
+  nameInput.value = '';
+  updateAddButton();
+  
+  showMessage(`Warehouse "${name}" created`, 'success');
 }
+
 function addItem() {
-  let itemName = document.getElementById('itemName').value;
-  if (!itemName) {
-    alert('Enter an item name');
-    return;
-  }
   if (!currentWarehouse) {
-    alert('Create a warehouse first');
+    showMessage('Please select or create a warehouse first', 'error');
     return;
   }
+  
+  let itemNameInput = document.getElementById('itemName');
+  let quantityInput = document.getElementById('itemQuantity');
+  
+  let itemName = itemNameInput.value.trim();
+  let quantity = parseInt(quantityInput.value) || 1;
+  
+  if (!itemName) {
+    showMessage('Please enter an item name', 'error');
+    return;
+  }
+  
   let now = new Date().toLocaleString();
-  currentWarehouse.items.push({
-    name: itemName,
-    time: now
-  });
-  let history = JSON.parse(localStorage.getItem('historyLogs') || '[]');
-  history.push(now + ': Added "' + itemName + '" to "' + currentWarehouse.name + '"');
-  localStorage.setItem('historyLogs', JSON.stringify(history));
+  
+  let existingItem = currentWarehouse.items.find(item => 
+    item.name.toLowerCase() === itemName.toLowerCase()
+  );
+  
+  if (existingItem) {
+    existingItem.quantity = (existingItem.quantity || 1) + quantity;
+    existingItem.lastModified = now;
+    
+    let history = JSON.parse(localStorage.getItem('historyLogs') || '[]');
+    history.push(now + ': Updated "' + itemName + '" quantity to ' + existingItem.quantity + ' in "' + currentWarehouse.name + '"');
+    localStorage.setItem('historyLogs', JSON.stringify(history));
+    
+    showMessage(`Updated "${itemName}" quantity to ${existingItem.quantity}`, 'success');
+  } else {
+    let newItem = {
+      name: itemName,
+      quantity: quantity,
+      added: now
+    };
+    
+    currentWarehouse.items.push(newItem);
+    
+    let history = JSON.parse(localStorage.getItem('historyLogs') || '[]');
+    history.push(now + ': Added "' + itemName + '" (' + quantity + ') to "' + currentWarehouse.name + '"');
+    localStorage.setItem('historyLogs', JSON.stringify(history));
+    
+    showMessage(`Added "${itemName}" (${quantity}) to ${currentWarehouse.name}`, 'success');
+  }
+  
   saveData();
-  document.getElementById('itemName').value = '';
-  alert('Added "' + itemName + '" to ' + currentWarehouse.name);
+  
+  itemNameInput.value = '';
+  quantityInput.value = '1';
 }
+
+function saveData() {
+  localStorage.setItem('warehouses', JSON.stringify(warehouses));
+}
+
+function showMessage(text, type) {
+  let messageDiv = document.getElementById('message');
+  messageDiv.textContent = text;
+  messageDiv.className = 'message ' + type;
+  messageDiv.style.display = 'block';
+  
+  setTimeout(() => {
+    messageDiv.style.display = 'none';
+  }, 3000);
+}
+
 function viewHistory() {
   window.location.href = 'history.html';
 }
+
+document.getElementById('warehouseSelect').onchange = changeWarehouse;
 </script>
 </body>
 </html>
